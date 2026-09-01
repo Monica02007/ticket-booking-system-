@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Seat, Show } from './types';
+import { Seat, Show, Booking } from './types';
 import { SeatInventory } from './services/inventory';
 import { INITIAL_SHOWS } from './services/domain';
 import { auditLogger } from './services/auditLogger';
@@ -15,6 +15,8 @@ import { SeatDetailsModal } from './components/SeatDetailsModal';
 import { ArchitectureInfoModal } from './components/ArchitectureInfoModal';
 import { EventsDashboard } from './components/EventsDashboard';
 import { HostEventModal } from './components/HostEventModal';
+import { TicketPassModal } from './components/TicketPassModal';
+import { OrganizerAnalyticsStudio } from './components/OrganizerAnalyticsStudio';
 
 export const App: React.FC = () => {
   // Multi-event registry state
@@ -41,9 +43,13 @@ export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<NavTabType>('dashboard');
   const [serviceMode, setServiceMode] = useState<'SAFE' | 'UNSAFE'>('SAFE');
 
+  // Multi-seat selection basket
+  const [selectedSeatIds, setSelectedSeatIds] = useState<string[]>([]);
+
   // Modals state
-  const [bookingSeat, setBookingSeat] = useState<Seat | null>(null);
+  const [checkoutSeats, setCheckoutSeats] = useState<Seat[] | null>(null);
   const [inspectSeat, setInspectSeat] = useState<Seat | null>(null);
+  const [ticketPassBooking, setTicketPassBooking] = useState<Booking | null>(null);
   const [isArchitectureModalOpen, setIsArchitectureModalOpen] = useState<boolean>(false);
   const [isHostModalOpen, setIsHostModalOpen] = useState<boolean>(false);
 
@@ -53,6 +59,7 @@ export const App: React.FC = () => {
 
   useEffect(() => {
     refreshSeats();
+    setSelectedSeatIds([]);
   }, [activeShow, refreshSeats]);
 
   const handleResetInventory = () => {
@@ -60,16 +67,32 @@ export const App: React.FC = () => {
     bookingDAO.clearAll();
     auditLogger.clearLogs();
     refreshSeats();
-    setBookingSeat(null);
+    setSelectedSeatIds([]);
+    setCheckoutSeats(null);
     setInspectSeat(null);
+    setTicketPassBooking(null);
   };
 
-  const handleSelectSeat = (seat: Seat) => {
-    if (!seat.isBooked && !seat.isLocked) {
-      setBookingSeat(seat);
-    } else {
+  const handleToggleSeatSelect = (seat: Seat) => {
+    if (seat.isBooked || seat.isLocked) {
       setInspectSeat(seat);
+      return;
     }
+
+    setSelectedSeatIds((prev) => {
+      if (prev.includes(seat.id)) {
+        return prev.filter((id) => id !== seat.id);
+      } else {
+        if (prev.length >= 6) {
+          return prev; // limit max 6 seats in cart
+        }
+        return [...prev, seat.id];
+      }
+    });
+  };
+
+  const handleProceedToMultiCheckout = (targetSeats: Seat[]) => {
+    setCheckoutSeats(targetSeats);
   };
 
   const handleSelectEvent = (event: Show) => {
@@ -78,7 +101,6 @@ export const App: React.FC = () => {
   };
 
   const handleAddNewEvent = (newEvent: Show) => {
-    // Pre-initialize inventory for new show
     const inv = new SeatInventory(newEvent.rows || 6, newEvent.seatsPerRow || 8, newEvent.basePrice);
     inventoriesRef.current.set(newEvent.id, inv);
 
@@ -92,6 +114,8 @@ export const App: React.FC = () => {
   const bookedSeats = seats.filter((s) => s.isBooked).length;
   const availableSeats = totalSeats - bookedSeats;
   const overbookedSeats = seats.filter((s) => s.bookedByCustomerIds.length > 1).length;
+
+  const allBookings = bookingDAO.getAllBookings();
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-indigo-500 selection:text-white">
@@ -121,7 +145,7 @@ export const App: React.FC = () => {
           />
         )}
 
-        {/* SEATMAP, SIMULATOR, AUDIT, DATABASE (Active on chosen event) */}
+        {/* SEATMAP, ANALYTICS, SIMULATOR, AUDIT, DATABASE (Active on chosen event) */}
         {activeTab !== 'dashboard' && (
           <>
             {/* Show Header & Global State Bar */}
@@ -141,26 +165,39 @@ export const App: React.FC = () => {
               <div className="space-y-6">
                 <SeatMapGrid
                   seats={seats}
-                  onSelectSeat={handleSelectSeat}
-                  selectedSeatId={bookingSeat?.id || inspectSeat?.id}
+                  selectedSeatIds={selectedSeatIds}
+                  onToggleSeatSelect={handleToggleSeatSelect}
+                  onCheckoutSeats={handleProceedToMultiCheckout}
+                  onClearSelectedSeats={() => setSelectedSeatIds([])}
                 />
 
                 {/* Quick Helper Banners */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 text-xs text-slate-400 space-y-1">
-                    <span className="font-semibold text-slate-200">Interactive Seat Selection:</span>
+                  <div className="bg-slate-900/60 p-4 rounded-2xl border border-slate-800 text-xs text-slate-400 space-y-1">
+                    <span className="font-semibold text-slate-200">
+                      Amphitheater Seating & Multi-Seat Selection:
+                    </span>
                     <p>
-                      Click any available green seat to checkout with multi-step attendee info and real-time payment authorization.
+                      Select up to 6 seats in your cart basket, review perks and direct sightlines, and proceed to atomic checkout.
                     </p>
                   </div>
-                  <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 text-xs text-slate-400 space-y-1">
-                    <span className="font-semibold text-slate-200">Flash Sale Concurrency Simulator:</span>
+                  <div className="bg-slate-900/60 p-4 rounded-2xl border border-slate-800 text-xs text-slate-400 space-y-1">
+                    <span className="font-semibold text-slate-200">Organizer Revenue Studio:</span>
                     <p>
-                      Switch to the <strong className="text-indigo-400">Flash Sale Simulator</strong> tab to run 50+ concurrent coroutines against this event.
+                      Switch to the <strong className="text-emerald-400">Revenue Studio</strong> tab to monitor gross revenue, sales velocity curves, and export CSV door manifests.
                     </p>
                   </div>
                 </div>
               </div>
+            )}
+
+            {/* ORGANIZER REVENUE STUDIO TAB */}
+            {activeTab === 'analytics' && (
+              <OrganizerAnalyticsStudio
+                show={activeShow}
+                allBookings={allBookings}
+                seats={seats}
+              />
             )}
 
             {/* SIMULATOR TAB */}
@@ -190,15 +227,24 @@ export const App: React.FC = () => {
         />
       )}
 
-      {bookingSeat && (
+      {checkoutSeats && checkoutSeats.length > 0 && (
         <CustomerBookingModal
-          seat={bookingSeat}
-          onClose={() => setBookingSeat(null)}
+          seats={checkoutSeats}
+          onClose={() => {
+            setCheckoutSeats(null);
+            setSelectedSeatIds([]);
+          }}
           inventory={currentInventory}
           serviceMode={serviceMode}
           showId={activeShow.id}
+          currentShow={activeShow}
           onBookingSuccess={() => {
             refreshSeats();
+          }}
+          onViewTicketPass={(booking) => {
+            setCheckoutSeats(null);
+            setSelectedSeatIds([]);
+            setTicketPassBooking(booking);
           }}
         />
       )}
@@ -207,8 +253,17 @@ export const App: React.FC = () => {
         <SeatDetailsModal
           seat={inspectSeat}
           onClose={() => setInspectSeat(null)}
-          onOpenBookingModal={(s) => setBookingSeat(s)}
+          onOpenBookingModal={(s) => setCheckoutSeats([s])}
           onRefresh={refreshSeats}
+        />
+      )}
+
+      {/* Realistic Printable & Wallet Ticket Pass Modal */}
+      {ticketPassBooking && (
+        <TicketPassModal
+          booking={ticketPassBooking}
+          show={activeShow}
+          onClose={() => setTicketPassBooking(null)}
         />
       )}
 
@@ -217,8 +272,8 @@ export const App: React.FC = () => {
       )}
 
       {/* Footer */}
-      <footer className="border-t border-slate-800/80 bg-slate-950 py-4 text-center text-xs text-slate-500">
-        <p>TicketCore Multi-Event Booking & Concurrency Locking Platform • AI Studio Web Runtime</p>
+      <footer className="border-t border-slate-800/80 bg-slate-950 py-5 text-center text-xs text-slate-500">
+        <p>TicketCore Enterprise Multi-Event Booking & Concurrency Platform • AI Studio Web Runtime</p>
       </footer>
     </div>
   );

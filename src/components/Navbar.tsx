@@ -1,7 +1,19 @@
 import React from 'react';
-import { ShieldCheck, ShieldAlert, Zap, RotateCcw, Database, FileText, Info, Compass, Plus } from 'lucide-react';
+import {
+  ShieldCheck,
+  ShieldAlert,
+  Zap,
+  RotateCcw,
+  Database,
+  FileText,
+  Info,
+  Compass,
+  Plus,
+  BarChart3,
+  Armchair
+} from 'lucide-react';
 
-export type NavTabType = 'dashboard' | 'seatmap' | 'simulator' | 'audit' | 'database';
+export type NavTabType = 'dashboard' | 'seatmap' | 'analytics' | 'simulator' | 'audit' | 'database';
 
 interface NavbarProps {
   activeTab: NavTabType;
@@ -45,7 +57,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     TicketCore
                   </span>
                   <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-slate-800 text-slate-300 border border-slate-700">
-                    v2.0
+                    v2.5 Pro
                   </span>
                   {overbookingCount > 0 && (
                     <span className="animate-pulse flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-bold bg-rose-500/20 text-rose-400 border border-rose-500/40">
@@ -54,8 +66,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-slate-400">
-                  {activeShowTitle ? `Active: ${activeShowTitle}` : 'Multi-Event Concurrency Hub'}
+                <p className="text-xs text-slate-400 truncate max-w-[200px] sm:max-w-xs">
+                  {activeShowTitle ? `Event: ${activeShowTitle}` : 'Multi-Event Concurrency Hub'}
                 </p>
               </div>
             </button>
@@ -79,13 +91,27 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               id="nav-tab-seatmap"
               onClick={() => setActiveTab('seatmap')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
                 activeTab === 'seatmap'
                   ? 'bg-indigo-600 text-white shadow-sm'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
               }`}
             >
-              Seat Map
+              <Armchair className="w-3.5 h-3.5" />
+              <span>Amphitheater Seating</span>
+            </button>
+
+            <button
+              id="nav-tab-analytics"
+              onClick={() => setActiveTab('analytics')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                activeTab === 'analytics'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+              }`}
+            >
+              <BarChart3 className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Revenue Studio</span>
             </button>
 
             <button
@@ -98,7 +124,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               }`}
             >
               <Zap className="w-3.5 h-3.5 text-amber-400" />
-              Flash Sale Simulator
+              <span>Flash Simulator</span>
             </button>
 
             <button
@@ -111,7 +137,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               }`}
             >
               <FileText className="w-3.5 h-3.5" />
-              Audit Log
+              <span>Audit Log</span>
             </button>
 
             <button
@@ -124,7 +150,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               }`}
             >
               <Database className="w-3.5 h-3.5 text-cyan-400" />
-              JDBC Store
+              <span>DB Store</span>
             </button>
           </nav>
 
@@ -215,6 +241,14 @@ export const Navbar: React.FC<NavbarProps> = ({
             Seat Map
           </button>
           <button
+            onClick={() => setActiveTab('analytics')}
+            className={`px-3 py-1 rounded-lg text-xs font-semibold whitespace-nowrap ${
+              activeTab === 'analytics' ? 'bg-indigo-600 text-white' : 'text-slate-400'
+            }`}
+          >
+            Revenue Studio
+          </button>
+          <button
             onClick={() => setActiveTab('simulator')}
             className={`px-3 py-1 rounded-lg text-xs font-semibold whitespace-nowrap ${
               activeTab === 'simulator' ? 'bg-indigo-600 text-white' : 'text-slate-400'
@@ -236,19 +270,10 @@ export const Navbar: React.FC<NavbarProps> = ({
               activeTab === 'database' ? 'bg-indigo-600 text-white' : 'text-slate-400'
             }`}
           >
-            JDBC Store
+            DB Store
           </button>
-          {onOpenHostModal && (
-            <button
-              onClick={onOpenHostModal}
-              className="px-3 py-1 rounded-lg text-xs font-semibold whitespace-nowrap bg-indigo-600/30 text-indigo-300 border border-indigo-500/40"
-            >
-              + Host Event
-            </button>
-          )}
         </div>
       </div>
     </header>
   );
 };
-

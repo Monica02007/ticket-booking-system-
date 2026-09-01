@@ -2,6 +2,22 @@ export type SeatCategory = 'REGULAR' | 'PREMIUM' | 'VIP';
 
 export type BookingStatus = 'LOCKED' | 'CONFIRMED' | 'CANCELLED' | 'RELEASED' | 'OVERBOOKED_ERROR';
 
+export interface AddOnItem {
+  id: string;
+  name: string;
+  price: number;
+  description: string;
+  iconName: string;
+}
+
+export interface PromoDiscount {
+  code: string;
+  discountPercent?: number;
+  fixedDiscount?: number;
+  perk?: string;
+  description: string;
+}
+
 export interface Seat {
   id: string; // e.g. "A1", "C4"
   row: string;
@@ -13,6 +29,9 @@ export interface Seat {
   bookedByCustomerIds: string[]; // Track if multiple customers booked it (overbooking detection!)
   lockedByCustomerId?: string;
   lockTimestamp?: number;
+  viewAngleRating?: string;
+  perks?: string[];
+  sectionName?: string;
 }
 
 export interface Show {
@@ -46,9 +65,15 @@ export interface Booking {
   customerId: string;
   customerName: string;
   customerEmail: string;
+  customerPhone?: string;
   seatId: string;
+  seatIds?: string[];
   seatCategory: SeatCategory;
   amountPaid: number;
+  baseAmount?: number;
+  discountAmount?: number;
+  promoCode?: string;
+  addOns?: AddOnItem[];
   paymentMethod?: 'CREDIT_CARD' | 'DEBIT_CARD' | 'UPI';
   paymentDetails?: string;
   status: BookingStatus;
@@ -56,6 +81,7 @@ export interface Booking {
   threadId?: string;
   serviceType: 'SAFE' | 'UNSAFE';
   isDoubleBooked?: boolean;
+  gateNumber?: string;
 }
 
 export interface AuditLogEntry {
@@ -82,4 +108,8 @@ export interface SimulationResult {
   doubleBookedTransactionsCount: number;
   executionTimeMs: number;
   completedAt: number;
+  throughputRps?: number;
+  avgLockLatencyMs?: number;
+  p99LatencyMs?: number;
 }
+

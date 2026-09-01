@@ -28,10 +28,19 @@ export class SeatInventory {
 
         if (category === 'VIP') {
           seatInstance = new VIPSeat(seatId, rowLetter, s, basePrice);
+          seatInstance.sectionName = 'Orchestra VIP Tier';
+          seatInstance.viewAngleRating = '100% Direct Center Stage Sightline';
+          seatInstance.perks = ['Backstage Pass Included', 'Complimentary Champagne & Snacks', 'Gate A Priority Fast-Track'];
         } else if (category === 'PREMIUM') {
           seatInstance = new PremiumSeat(seatId, rowLetter, s, basePrice);
+          seatInstance.sectionName = 'Mezzanine Premium Tier';
+          seatInstance.viewAngleRating = '95% Unobstructed Elevated View';
+          seatInstance.perks = ['Dedicated Mezzanine Lounge Bar', 'Padded Ergonomic Seating', 'Gate B Express Entry'];
         } else {
           seatInstance = new RegularSeat(seatId, rowLetter, s, basePrice);
+          seatInstance.sectionName = 'Grand Balcony & Stalls';
+          seatInstance.viewAngleRating = '88% Panoramic Arena Vista';
+          seatInstance.perks = ['Standard Arena Access', 'Nearby Merchandise & Beverage Kiosks'];
         }
 
         this.seats.set(seatId, seatInstance);
@@ -73,6 +82,24 @@ export class SeatInventory {
     return true;
   }
 
+  // Atomically acquire multiple seat locks with all-or-nothing rollback
+  acquireSafeLocks(seatIds: string[], customerId: string, timeoutMs: number = 600000): boolean {
+    const acquired: string[] = [];
+    for (const seatId of seatIds) {
+      const ok = this.acquireSafeLock(seatId, customerId, timeoutMs);
+      if (ok) {
+        acquired.push(seatId);
+      } else {
+        // Rollback already acquired locks
+        for (const acq of acquired) {
+          this.releaseSafeLock(acq, customerId);
+        }
+        return false;
+      }
+    }
+    return true;
+  }
+
   releaseSafeLock(seatId: string, customerId: string): void {
     const existing = this.seatLocks.get(seatId);
     if (existing && existing.lockedBy === customerId) {
@@ -83,6 +110,12 @@ export class SeatInventory {
         seat.lockedByCustomerId = undefined;
         seat.lockTimestamp = undefined;
       }
+    }
+  }
+
+  releaseSafeLocks(seatIds: string[], customerId: string): void {
+    for (const seatId of seatIds) {
+      this.releaseSafeLock(seatId, customerId);
     }
   }
 
@@ -103,6 +136,21 @@ export class SeatInventory {
     seat.isLocked = false;
     seat.bookedByCustomerIds.push(customerId);
     this.seatLocks.delete(seatId);
+    return true;
+  }
+
+  confirmSafeBookings(seatIds: string[], customerId: string): boolean {
+    // Verify all can be confirmed
+    for (const seatId of seatIds) {
+      const seat = this.seats.get(seatId);
+      const lock = this.seatLocks.get(seatId);
+      if (!seat || !lock || lock.lockedBy !== customerId || seat.isBooked) {
+        return false;
+      }
+    }
+    for (const seatId of seatIds) {
+      this.confirmSafeBooking(seatId, customerId);
+    }
     return true;
   }
 

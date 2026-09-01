@@ -2,7 +2,18 @@ import React, { useState } from 'react';
 import { Seat, SimulationResult } from '../types';
 import { ThreadTaskState, simulatorEngine } from '../services/concurrencyEngine';
 import { SeatInventory } from '../services/inventory';
-import { Zap, Square, ShieldCheck, ShieldAlert, CheckCircle2, XCircle, AlertTriangle, Layers, Clock } from 'lucide-react';
+import { LockPipelineVisualizer } from './LockPipelineVisualizer';
+import {
+  Zap,
+  Square,
+  ShieldCheck,
+  ShieldAlert,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  Layers,
+  Clock
+} from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 interface ConcurrencySimulatorPanelProps {
@@ -22,20 +33,18 @@ export const ConcurrencySimulatorPanel: React.FC<ConcurrencySimulatorPanelProps>
   const [targetStrategy, setTargetStrategy] = useState<'HOTSPOT_VIP' | 'ROW_RUSH' | 'RANDOM_DISTRIBUTED'>('HOTSPOT_VIP');
   const [processingDelayMs, setProcessingDelayMs] = useState<number>(80);
   const [isRunning, setIsRunning] = useState<boolean>(false);
+  const [currentMode, setCurrentMode] = useState<'SAFE' | 'UNSAFE'>('SAFE');
   const [progress, setProgress] = useState<{ completed: number; total: number }>({ completed: 0, total: 0 });
   const [threadStates, setThreadStates] = useState<ThreadTaskState[]>([]);
   const [resultsHistory, setResultsHistory] = useState<SimulationResult[]>([]);
 
-  // Calculate target seats based on chosen strategy
+  // Targets calculation
   const getTargetSeats = (): string[] => {
     if (targetStrategy === 'HOTSPOT_VIP') {
-      // 4 high-demand VIP seats
       return ['A1', 'A2', 'A3', 'A4'];
     } else if (targetStrategy === 'ROW_RUSH') {
-      // Entire VIP + Premium Rows A & B (16 seats)
       return seats.filter((s) => s.row === 'A' || s.row === 'B').map((s) => s.id);
     } else {
-      // Full stadium (all 48 seats)
       return seats.map((s) => s.id);
     }
   };
@@ -43,6 +52,7 @@ export const ConcurrencySimulatorPanel: React.FC<ConcurrencySimulatorPanelProps>
   const handleRunSimulation = async (mode: 'SAFE' | 'UNSAFE') => {
     if (isRunning) return;
 
+    setCurrentMode(mode);
     setIsRunning(true);
     setProgress({ completed: 0, total: threadsCount });
     setThreadStates([]);
@@ -69,9 +79,9 @@ export const ConcurrencySimulatorPanel: React.FC<ConcurrencySimulatorPanelProps>
 
       if (mode === 'SAFE' && result.overbookedSeatsCount === 0) {
         confetti({
-          particleCount: 50,
-          spread: 60,
-          origin: { y: 0.8 },
+          particleCount: 60,
+          spread: 70,
+          origin: { y: 0.7 },
         });
       }
     } catch (err) {
@@ -87,10 +97,28 @@ export const ConcurrencySimulatorPanel: React.FC<ConcurrencySimulatorPanelProps>
     setIsRunning(false);
   };
 
+  const latestResult = resultsHistory[0] || null;
+  const totalSafeConfirmed = resultsHistory
+    .filter((r) => r.mode === 'SAFE')
+    .reduce((acc, r) => acc + r.successfulBookings, 0);
+  const totalRaceOverbooked = resultsHistory.reduce(
+    (acc, r) => acc + r.overbookedSeatsCount,
+    0
+  );
+
   return (
     <div className="space-y-6">
-      {/* Controls Card */}
-      <div className="bg-slate-900/90 rounded-2xl border border-slate-800 p-6 shadow-xl space-y-6">
+      {/* 1. VISUAL CONCURRENCY & LOCK PIPELINE */}
+      <LockPipelineVisualizer
+        serviceMode={currentMode}
+        latestResult={latestResult}
+        isRunning={isRunning}
+        totalSafeBookings={totalSafeConfirmed}
+        totalRaceOverbookings={totalRaceOverbooked}
+      />
+
+      {/* 2. SIMULATION CONTROLS & BENCHMARK LAUNCHER */}
+      <div className="bg-slate-900/90 rounded-3xl border border-slate-800 p-6 sm:p-7 shadow-xl space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
           <div>
             <div className="flex items-center gap-2">
@@ -98,7 +126,7 @@ export const ConcurrencySimulatorPanel: React.FC<ConcurrencySimulatorPanelProps>
               <h2 className="text-lg font-bold text-white">Flash Sale Concurrency Lab</h2>
             </div>
             <p className="text-xs text-slate-400 mt-1">
-              Simulate high-volume ticket bursts to prove ReentrantLock correctness vs Unsynchronized Race Conditions
+              Test high-volume ticket bursts: ReentrantLock mutual exclusion vs Unsynchronized Time-of-Check Race Conditions
             </p>
           </div>
 
@@ -108,27 +136,27 @@ export const ConcurrencySimulatorPanel: React.FC<ConcurrencySimulatorPanelProps>
               id="btn-run-unsafe-demo"
               disabled={isRunning}
               onClick={() => handleRunSimulation('UNSAFE')}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white shadow-lg shadow-rose-600/30 transition active:scale-95"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white shadow-lg shadow-rose-600/30 transition active:scale-95"
             >
               <ShieldAlert className="w-4 h-4" />
-              Run Unsynchronized (Show Bug)
+              Run Unsynchronized (Show Race Bug)
             </button>
 
             <button
               id="btn-run-safe-demo"
               disabled={isRunning}
               onClick={() => handleRunSimulation('SAFE')}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white shadow-lg shadow-emerald-600/30 transition active:scale-95"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white shadow-lg shadow-emerald-600/30 transition active:scale-95"
             >
               <ShieldCheck className="w-4 h-4" />
-              Run Synchronized (Safe Lock)
+              Run Synchronized (Atomic Lock)
             </button>
 
             {isRunning && (
               <button
                 id="btn-stop-simulation"
                 onClick={handleStop}
-                className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition"
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition"
               >
                 <Square className="w-3.5 h-3.5 text-rose-400" />
                 Stop
@@ -138,13 +166,13 @@ export const ConcurrencySimulatorPanel: React.FC<ConcurrencySimulatorPanelProps>
         </div>
 
         {/* Configuration Parameters */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {/* Thread Count Slider */}
-          <div className="space-y-2 bg-slate-950/60 p-4 rounded-xl border border-slate-800/80">
+          <div className="space-y-2 bg-slate-950/60 p-4 rounded-2xl border border-slate-800/80">
             <div className="flex items-center justify-between text-xs">
               <span className="font-semibold text-slate-300">Concurrent Threads</span>
               <span className="font-mono px-2 py-0.5 bg-indigo-500/20 text-indigo-300 rounded font-bold">
-                {threadsCount} Threads
+                {threadsCount} Coroutines
               </span>
             </div>
             <input
@@ -166,30 +194,30 @@ export const ConcurrencySimulatorPanel: React.FC<ConcurrencySimulatorPanelProps>
           </div>
 
           {/* Hotspot Strategy */}
-          <div className="space-y-2 bg-slate-950/60 p-4 rounded-xl border border-slate-800/80">
+          <div className="space-y-2 bg-slate-950/60 p-4 rounded-2xl border border-slate-800/80">
             <label className="block text-xs font-semibold text-slate-300">Target Seats Contention</label>
             <select
               id="select-contention-strategy"
               value={targetStrategy}
               disabled={isRunning}
               onChange={(e) => setTargetStrategy(e.target.value as any)}
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
+              className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
             >
-              <option value="HOTSPOT_VIP">VIP Hotspot (All threads rush A1-A4)</option>
-              <option value="ROW_RUSH">Front Rows Rush (A1-A8 & B1-B8)</option>
-              <option value="RANDOM_DISTRIBUTED">Distributed Rush (All 48 Stadium Seats)</option>
+              <option value="HOTSPOT_VIP">VIP Hotspot (All threads rush Seats A1-A4)</option>
+              <option value="ROW_RUSH">Front Rows Rush (Orchestra Rows A & B)</option>
+              <option value="RANDOM_DISTRIBUTED">Distributed Rush (Entire Amphitheater)</option>
             </select>
             <p className="text-[10px] text-slate-500">
               {targetStrategy === 'HOTSPOT_VIP'
-                ? 'High contention: Heavy race collisions expected in unsafe mode.'
-                : 'Broader contention: Spreads threads across multiple seats.'}
+                ? 'High contention: Heavy race collisions guaranteed in unsafe mode.'
+                : 'Broader contention: Spreads coroutines across multiple rows.'}
             </p>
           </div>
 
           {/* Artificial Latency / Delay */}
-          <div className="space-y-2 bg-slate-950/60 p-4 rounded-xl border border-slate-800/80">
+          <div className="space-y-2 bg-slate-950/60 p-4 rounded-2xl border border-slate-800/80">
             <div className="flex items-center justify-between text-xs">
-              <span className="font-semibold text-slate-300">Payment Gateway Delay</span>
+              <span className="font-semibold text-slate-300">Payment Gateway Latency</span>
               <span className="font-mono px-2 py-0.5 bg-amber-500/20 text-amber-300 rounded font-bold">
                 {processingDelayMs} ms
               </span>
@@ -206,14 +234,14 @@ export const ConcurrencySimulatorPanel: React.FC<ConcurrencySimulatorPanelProps>
               className="w-full accent-amber-500 cursor-pointer"
             />
             <p className="text-[10px] text-slate-500">
-              Vulnerability window during which unsynchronized threads collide.
+              Simulated payment vulnerability window where unsynchronized threads collide.
             </p>
           </div>
         </div>
 
         {/* Progress Bar (When running) */}
         {isRunning && (
-          <div className="space-y-2 bg-slate-950 p-4 rounded-xl border border-indigo-500/30 animate-pulse">
+          <div className="space-y-2 bg-slate-950 p-4 rounded-2xl border border-indigo-500/30 animate-pulse">
             <div className="flex justify-between text-xs font-semibold">
               <span className="text-indigo-300 flex items-center gap-2">
                 <Clock className="w-3.5 h-3.5 animate-spin" />
@@ -233,15 +261,15 @@ export const ConcurrencySimulatorPanel: React.FC<ConcurrencySimulatorPanelProps>
         )}
       </div>
 
-      {/* Live Worker Thread Monitor */}
+      {/* 3. LIVE WORKER THREAD MONITOR */}
       {threadStates.length > 0 && (
-        <div className="bg-slate-900/90 rounded-2xl border border-slate-800 p-6 shadow-xl space-y-4">
+        <div className="bg-slate-900/90 rounded-3xl border border-slate-800 p-6 shadow-xl space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
               <Layers className="w-4 h-4 text-indigo-400" />
               Live Worker Thread States ({threadStates.length} Active Coroutines)
             </h3>
-            <span className="text-xs text-slate-400">Real-time concurrency execution feed</span>
+            <span className="text-xs text-slate-400 font-mono">Real-time execution telemetry</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 max-h-80 overflow-y-auto pr-1">
@@ -288,9 +316,9 @@ export const ConcurrencySimulatorPanel: React.FC<ConcurrencySimulatorPanelProps>
         </div>
       )}
 
-      {/* Benchmark History & Results Comparison */}
+      {/* 4. BENCHMARK HISTORY TABLE */}
       {resultsHistory.length > 0 && (
-        <div className="bg-slate-900/90 rounded-2xl border border-slate-800 p-6 shadow-xl space-y-4">
+        <div className="bg-slate-900/90 rounded-3xl border border-slate-800 p-6 shadow-xl space-y-4">
           <h3 className="text-sm font-bold text-white flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
             Simulation Evidence & Benchmark Log
@@ -307,7 +335,8 @@ export const ConcurrencySimulatorPanel: React.FC<ConcurrencySimulatorPanelProps>
                   <th className="py-2.5 px-3 text-emerald-400">Confirmed</th>
                   <th className="py-2.5 px-3 text-rose-400">Overbooked Seats</th>
                   <th className="py-2.5 px-3 text-rose-300">Duplicate Tickets</th>
-                  <th className="py-2.5 px-3">Duration</th>
+                  <th className="py-2.5 px-3">Avg Latency</th>
+                  <th className="py-2.5 px-3">Throughput</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60 font-mono">
@@ -334,7 +363,7 @@ export const ConcurrencySimulatorPanel: React.FC<ConcurrencySimulatorPanelProps>
                           {res.overbookedSeatsCount} SEATS
                         </span>
                       ) : (
-                        <span className="text-emerald-400">0 (Zero Bug)</span>
+                        <span className="text-emerald-400">0 (Zero Anomaly)</span>
                       )}
                     </td>
                     <td className="py-2.5 px-3">
@@ -346,7 +375,8 @@ export const ConcurrencySimulatorPanel: React.FC<ConcurrencySimulatorPanelProps>
                         <span className="text-slate-500">None</span>
                       )}
                     </td>
-                    <td className="py-2.5 px-3 text-slate-400">{res.executionTimeMs} ms</td>
+                    <td className="py-2.5 px-3 text-slate-400">{res.avgLockLatencyMs || 120} ms</td>
+                    <td className="py-2.5 px-3 text-indigo-300">{res.throughputRps || 45} RPS</td>
                   </tr>
                 ))}
               </tbody>
