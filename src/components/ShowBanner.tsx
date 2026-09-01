@@ -9,6 +9,8 @@ interface ShowBannerProps {
   availableSeats: number;
   bookedSeats: number;
   overbookedSeats: number;
+  onSwitchEvent?: () => void;
+  onHostEvent?: () => void;
 }
 
 export const ShowBanner: React.FC<ShowBannerProps> = ({
@@ -18,6 +20,8 @@ export const ShowBanner: React.FC<ShowBannerProps> = ({
   availableSeats,
   bookedSeats,
   overbookedSeats,
+  onSwitchEvent,
+  onHostEvent,
 }) => {
   return (
     <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-slate-800/80 p-6 shadow-xl">
@@ -30,7 +34,7 @@ export const ShowBanner: React.FC<ShowBannerProps> = ({
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
               <Sparkles className="w-3 h-3" />
-              Live Concert Flash Sale
+              {show.category || 'Live Event'} Flash Sale
             </span>
             <span
               className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
@@ -72,6 +76,30 @@ export const ShowBanner: React.FC<ShowBannerProps> = ({
               <span>Starting from ${show.basePrice}</span>
             </div>
           </div>
+
+          {/* Quick Switch Action */}
+          {(onSwitchEvent || onHostEvent) && (
+            <div className="flex items-center gap-2 pt-2">
+              {onSwitchEvent && (
+                <button
+                  onClick={onSwitchEvent}
+                  id="btn-switch-event-banner"
+                  className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-semibold border border-slate-700 transition"
+                >
+                  ← Browse All Events
+                </button>
+              )}
+              {onHostEvent && (
+                <button
+                  onClick={onHostEvent}
+                  id="btn-host-event-banner"
+                  className="px-3 py-1.5 rounded-lg bg-indigo-600/30 hover:bg-indigo-600 text-indigo-200 hover:text-white text-xs font-semibold border border-indigo-500/40 transition"
+                >
+                  + Host Another Event
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Right: Real-time Seat Metric Indicators */}

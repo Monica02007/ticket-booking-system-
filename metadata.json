@@ -1,6 +1,6 @@
 {
   "name": "Ticket Booking System",
-  "description": "Concert ticket booking platform with flash sale concurrency simulator, safe vs unsafe locking engines, interactive seat selection, real-time audit logging, and admin dashboard.",
+  "description": "Multi-event ticket booking platform with event hosting dashboard, flash sale concurrency simulator, safe vs unsafe locking engines, interactive seat selection, payment validation, and real-time audit logging.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

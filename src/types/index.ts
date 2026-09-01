@@ -24,6 +24,12 @@ export interface Show {
   totalSeats: number;
   basePrice: number;
   bannerImage: string;
+  category?: 'Concert' | 'Festival' | 'Theatre' | 'Sports' | 'Comedy' | 'Conference';
+  city?: string;
+  tags?: string[];
+  description?: string;
+  rows?: number;
+  seatsPerRow?: number;
 }
 
 export interface Customer {
