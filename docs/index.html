@@ -2,18 +2,6 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <script>
-      // Automatic fallback for GitHub Pages when deployed directly from the root repository
-      (function() {
-        var isGitHub = window.location.hostname.indexOf('github.io') !== -1;
-        var p = window.location.pathname;
-        if (isGitHub && p.indexOf('/dist/') === -1 && p.indexOf('/docs/') === -1) {
-          var clean = p.slice(-1) === '/' ? p : p + '/';
-          window.location.replace(clean + 'dist/' + window.location.search + window.location.hash);
-        }
-      })();
-    </script>
-    <noscript><meta http-equiv="refresh" content="0;url=./dist/"></noscript>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234f46e5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='18' height='18' x='3' y='3' rx='2'/><path d='M7 3v18'/><path d='M3 7.5h4'/><path d='M3 12h18'/><path d='M3 16.5h4'/><path d='M17 3v18'/><path d='M17 7.5h4'/><path d='M17 16.5h4'/></svg>" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Ticket Booking System</title>
@@ -23,9 +11,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script type="module" crossorigin src="./assets/index-Il-6hLwa.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-BPp7ziOd.css">
   </head>
   <body class="bg-slate-900 text-slate-100 font-sans antialiased min-h-screen">
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
